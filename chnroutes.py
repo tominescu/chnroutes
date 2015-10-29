@@ -7,6 +7,11 @@ import argparse
 import math
 import textwrap
 
+def calcDottedNetmask(mask):
+    bits = 0
+    for i in xrange(32-mask,32):
+        bits |= (1 << i)
+    return "%d.%d.%d.%d" % ((bits & 0xff000000) >> 24, (bits & 0xff0000) >> 16, (bits & 0xff00) >> 8 , (bits & 0xff))
 
 def generate_ovpn(metric):
     results = fetch_ip_data()  
@@ -18,6 +23,14 @@ def generate_ovpn(metric):
     print "Usage: Append the content of the newly created routes.txt to your openvpn config file," \
           " and also add 'max-routes %d', which takes a line, to the head of the file." % (len(results)+20)
 
+def generate_chinadns():
+    results = fetch_ip_data()
+    rfile = open('chinadns_chnroute.txt','w')
+    for ip, mask, _ in results:
+        route_item = "%s/%d\n"%(ip, sum([bin(int(x)).count('1') for x in mask.split('.')]))
+        rfile.write(route_item)
+    rfile.close()
+    print "Finished."
 
 def generate_linux(metric):
     results = fetch_ip_data()
@@ -235,7 +248,7 @@ if __name__=='__main__':
                         default='openvpn',
                         nargs='?',
                         help="Target platforms, it can be openvpn, mac, linux," 
-                        "win, android. openvpn by default.")
+                        "win, android, chinadns. openvpn by default.")
     parser.add_argument('-m','--metric',
                         dest='metric',
                         default=5,
@@ -255,6 +268,8 @@ if __name__=='__main__':
         generate_win(args.metric)
     elif args.platform.lower() == 'android':
         generate_android(args.metric)
+    elif args.platform.lower() == 'chinadns':
+        generate_chinadns()
     else:
         print>>sys.stderr, "Platform %s is not supported."%args.platform
         exit(1)
